@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Kannada } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import metaJson from "@data/meta.json";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsProvider } from "@/lib/settings";
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         </SettingsProvider>
+        <Analytics />
       </body>
     </html>
   );
