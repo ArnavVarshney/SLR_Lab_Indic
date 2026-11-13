@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { compose, vowelOrder } from "./composition";
 import { toCsv } from "./csv";
 import { fromColumnar } from "./data";
 import { matchExtremes, type MatchItem } from "./matching";
 import { mean, quantile, sd, smd } from "./stats";
+import type { AksharaRow } from "./types";
 
 describe("stats", () => {
   it("quantile matches numpy linear interpolation", () => {
@@ -83,5 +85,29 @@ describe("matchExtremes", () => {
     const r = matchExtremes(items, { q: 0.5, logFreqTolerance: 1, exactLength: false, maxPairs: 5 });
     expect(r.pairs.map((p) => [p.low.id, p.high.id])).toEqual([["c", "b"]]);
     expect(() => matchExtremes(items, { q: 0.7, logFreqTolerance: 1, exactLength: false, maxPairs: 5 })).toThrow();
+  });
+});
+
+describe("compose", () => {
+  const ak = (akshara: string, skeleton: string, vowel: string, vowel_kind: string, coda: string, token_count: number) =>
+    ({ akshara, skeleton, vowel, vowel_kind, coda, token_count, word_types: 1, cluster_type: "none" }) as AksharaRow;
+  const rows = [
+    ak("ಕ", "ಕ", "ಅ", "inherent", "", 6),
+    ak("ಕಾ", "ಕ", "ಾ", "matra", "", 3),
+    ak("ಕಾಂ", "ಕ", "ಾ", "matra", "N", 1),
+    ak("ಕ್", "ಕ", "", "dead", "", 2),
+    ak("ಅ", "", "ಅ", "independent", "", 9), // vowel letter: excluded
+  ];
+
+  it("orders vowels as kagunita with virama last", () => {
+    expect(vowelOrder(["್", "ೌ", "ಾ", "ಅ", "ಿ"])).toEqual(["ಅ", "ಾ", "ಿ", "ೌ", "್"]);
+  });
+
+  it("pivots skeleton × vowel and applies the coda filter", () => {
+    const all = compose(rows, "tok", "all");
+    expect(all.vowels).toEqual(["ಅ", "ಾ", "್"]);
+    expect(all.skeletons).toEqual([{ skeleton: "ಕ", cls: "single", total: 12, values: [6, 4, 2], variants: 4, attested: 2 }]);
+    expect(compose(rows, "tok", "none").skeletons[0].values).toEqual([6, 3, 2]);
+    expect(compose(rows, "typ", "N").skeletons[0].values).toEqual([0, 1, 0]);
   });
 });

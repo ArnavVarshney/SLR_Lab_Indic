@@ -38,6 +38,7 @@ export default function MethodsPage() {
               ["Akshara", "Orthographic syllable: (C+virama)* C | V, plus vowel sign and anusvara/visarga. Coda consonants are written on the following akshara (ಅ|ಮ್ಮ); anusvara attaches to the preceding one (ಎಂ|ದು)."],
               ["Structure", "C = consonant, V = vowel (inherent, sign or letter), N = anusvara, H = visarga, (dead) = virama-final."],
               ["Cluster", "geminate = two identical consonants (ಮ್ಮ); non-geminate = other clusters (ಕ್ರ); geminate+other = three or more consonants containing a geminate pair."],
+              ["Composition", "Consonantal akshara = skeleton (consonant cluster, ಕ್ಕ) + vowel (inherent ಅ, a vowel sign, or ◌್ for a dead consonant) + optional anusvara/visarga. Base classes: single = one consonant; geminate = two identical consonants (ನ್ನ); other conjunct = every other cluster, including geminate+other (ತ್ತ್ರ). Aksharas with doubled or conflicting signs are excluded as malformed."],
               ["Components", "Graphic components per akshara: consonants (base and subscript forms), vowel letter or sign, explicit virama, anusvara/visarga."],
             ]}
           />

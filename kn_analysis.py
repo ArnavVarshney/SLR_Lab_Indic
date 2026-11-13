@@ -50,7 +50,9 @@ MATRAS = set(chr(c) for c in range(0x0CBE, 0x0CCD)) | {"ೢ", "ೣ"}
 MODIFIERS = {ANUSVARA, VISARGA, CANDRABINDU, "಼", "ೕ", "ೖ"}
 SIGNS = MATRAS | MODIFIERS | {VIRAMA}
 ZWNJ = "‌"
+NUKTA = "಼"
 INHERENT = "ಅ"  # label for the inherent vowel /a/
+CODA_SIGNS = {ANUSVARA, VISARGA, CANDRABINDU}
 
 
 # --- Normalisation and syllabification --------------------------------------
@@ -98,6 +100,40 @@ def syllabify(word: str, orphans: Counter | None = None) -> list[str]:
     return aks
 
 
+def well_formed(a: str) -> bool:
+    """(C nukta? virama)* C nukta? [vowel sign | virama]? coda?  or  V coda?"""
+    i, n = 0, len(a)
+    if a[0] in INDEP_VOWELS:
+        return n == 1 or (n == 2 and a[1] in CODA_SIGNS)
+    while True:
+        if i >= n or a[i] not in CONSONANTS:
+            return False
+        i += 1
+        if i < n and a[i] == NUKTA:
+            i += 1
+        if i < n and a[i] == VIRAMA:
+            i += 1
+            if i == n:
+                return True  # dead consonant
+            if a[i] in CONSONANTS:
+                continue
+            return False
+        break
+    if i < n and a[i] in MATRAS:
+        i += 1
+    if i < n and a[i] in CODA_SIGNS:
+        i += 1
+    return i == n
+
+
+def skeleton(a: str) -> str:
+    """Consonant cluster of a well-formed consonantal akshara (ಕ್ಕಿ -> ಕ್ಕ, ಮ್ -> ಮ); '' otherwise."""
+    if not well_formed(a) or a[0] in INDEP_VOWELS:
+        return ""
+    sk = "".join(c for c in a if c in CONSONANTS or c in (VIRAMA, NUKTA))
+    return sk[:-1] if sk.endswith(VIRAMA) else sk
+
+
 def akshara_features(a: str) -> dict:
     cons = [c for c in a if c in CONSONANTS]
     indep = [c for c in a if c in INDEP_VOWELS]
@@ -124,6 +160,8 @@ def akshara_features(a: str) -> dict:
         "vowel_kind": "independent" if indep else "matra" if matra else "dead" if dead else "inherent",
         "vowel": indep[0] if indep else matra[0] if matra else "" if dead else INHERENT,
         "base_consonant": cons[0] if cons else "",
+        "skeleton": skeleton(a),
+        "well_formed": well_formed(a),
         "coda": coda,
         # graphic components a reader decodes: consonants (base + ottus),
         # vowel letter or sign, explicit virama, anusvara/visarga
@@ -343,11 +381,22 @@ def build() -> dict:
             "dead_consonant": col[inv.vowel_kind.eq("dead")].sum() / tot,
         })
 
-    simple = inv[(inv.n_consonants == 1) & inv.vowel_kind.isin(["inherent", "matra"])]
-    grid = simple.pivot_table(index="base_consonant", columns="vowel", values="token_count",
-                              aggfunc="sum", fill_value=0)
-    vcols = [INHERENT] + sorted(c for c in grid.columns if c != INHERENT)
-    grid = grid[vcols].loc[lambda g: g.sum(axis=1).sort_values(ascending=False).index]
+    # composition: consonant skeleton x vowel sign (virama for dead consonants)
+    cons_ak = inv[inv.skeleton.ne("")]
+    base_class = cons_ak.cluster_type.map(
+        lambda c: "single" if c == "none" else "geminate" if c == "geminate" else "conjunct")
+    vowel_col = cons_ak.vowel.where(cons_ak.vowel_kind.ne("dead"), VIRAMA)
+    by_class = cons_ak.groupby([base_class, vowel_col]).token_count.sum()
+    live = cons_ak[cons_ak.vowel_kind.ne("dead")]
+    composition = {
+        # skeleton x vowel (ಅ + signs) cells attested at least once, of all possible
+        "cells": {"attested": int(live.groupby(["skeleton", "vowel"]).ngroups),
+                  "possible": int(cons_ak.skeleton.nunique() * live.vowel.nunique())},
+        "skeletons": {k: int(v) for k, v in cons_ak.groupby(base_class).skeleton.nunique().items()},
+        "malformed": {"types": int((~inv.well_formed).sum()),
+                      "tokens": int(inv.loc[~inv.well_formed, "token_count"].sum())},
+        "vowel_share": {k: (g.droplevel(0) / g.sum()).to_dict() for k, g in by_class.groupby(level=0)},
+    }
 
     ranks = np.unique(np.round(np.logspace(0, np.log10(len(inv)), 80)).astype(int))
     wf = np.sort(np.array(list(word_freq.values())))[::-1]
@@ -386,14 +435,13 @@ def build() -> dict:
         "cluster": dist("cluster_type"),
         "vowel_kind": dist("vowel_kind"),
         "position": position,
-        "barakhadi": {"consonants": list(grid.index), "vowels": vcols,
-                      "counts": grid.values.astype(int).tolist()},
+        "composition": composition,
         "boundary": boundary,
     }
 
     tables = {
         "aksharas": inv[["akshara", "structure", "n_consonants", "cluster_type", "vowel_kind", "vowel",
-                         "base_consonant", "coda", "visual_components", "token_count", "per_million",
+                         "base_consonant", "skeleton", "well_formed", "coda", "visual_components", "token_count", "per_million",
                          "word_types", "initial", "medial", "final", "mono", "rank", "cum_share",
                          "H_next_tok", "H_next_typ", "P_end_tok", "n_successors"]],
         "bigrams": bigrams.sort_values("count_tok", ascending=False)[
@@ -465,6 +513,14 @@ def verify() -> None:
     assert wd.freq.sum() == s["word_tokens"] and len(wd) == s["word_types"]
     assert (wd.aksharas.str.split("|").str.len() == wd.n_aksharas).all()
     assert len(bi) == s["bigram_types"] and len(tri) == s["trigram_types"]
+    # composition: skeleton + (vowel sign | virama) + coda recomposes every consonantal akshara
+    cons = ak[ak.skeleton.ne("")]
+    last = cons.akshara.str[-1]
+    coda = last.where(last.isin(CODA_SIGNS), "")
+    assert ((coda != "") == (cons.coda != "")).all()
+    tail = cons.vowel.where(cons.vowel_kind.eq("matra"), "").where(cons.vowel_kind.ne("dead"), VIRAMA)
+    assert (cons.skeleton + tail + coda == cons.akshara).all()
+    assert ak.loc[ak.skeleton.eq("") & ak.well_formed, "vowel_kind"].eq("independent").all()
 
 
 def main() -> None:

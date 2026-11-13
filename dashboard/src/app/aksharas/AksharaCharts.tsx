@@ -24,13 +24,11 @@ export function AksharaCharts({
   cluster,
   vowelKind,
   position,
-  barakhadi,
 }: {
   structure: Distribution;
   cluster: Distribution;
   vowelKind: Distribution;
   position: Summary["position"];
-  barakhadi: Summary["barakhadi"];
 }) {
   const theme = useChartTheme();
   const [dist, setDist] = useState<DistKey>("structure");
@@ -80,52 +78,8 @@ export function AksharaCharts({
     };
   }, [theme, position]);
 
-  const heatOpt = useMemo(() => {
-    const { consonants, vowels, counts } = barakhadi;
-    const data: [number, number, number | string, number][] = [];
-    let max = 1;
-    counts.forEach((row, i) =>
-      row.forEach((c, j) => {
-        max = Math.max(max, c);
-        // value = log10(count + 1) for colour; count kept for tooltip; 0 → empty cell
-        data.push([j, i, c > 0 ? Math.log10(c + 1) : "-", c]);
-      }),
-    );
-    return {
-      ...base(theme),
-      grid: { left: 36, right: 16, top: 28, bottom: 56 },
-      tooltip: {
-        ...base(theme).tooltip,
-        formatter: (p: { data: [number, number, number, number] }) => {
-          const [j, i, , c] = p.data;
-          const ak = vowels[j] === "ಅ" ? consonants[i] : consonants[i] + vowels[j];
-          return `<span style="font-size:15px">${ak}</span> · ${fmtInt(c)} tokens`;
-        },
-      },
-      xAxis: { type: "category", position: "top", data: vowels.map((v) => (v === "ಅ" ? "ಅ" : "◌" + v)), ...axis(theme, { axisLabel: { color: theme.text, fontSize: 14 }, splitLine: { show: false } }) },
-      yAxis: { type: "category", inverse: true, data: consonants, ...axis(theme, { axisLabel: { color: theme.text, fontSize: 14 }, splitLine: { show: false } }) },
-      visualMap: {
-        type: "continuous",
-        min: 0,
-        max: Math.log10(max + 1),
-        calculable: false,
-        orient: "horizontal",
-        left: "center",
-        bottom: 4,
-        itemWidth: 10,
-        itemHeight: 160,
-        inRange: { color: theme.ramp },
-        text: [fmtInt(max), "1"],
-        textStyle: { color: theme.muted, fontSize: 11 },
-        dimension: 2,
-      },
-      series: [{ type: "heatmap", data, itemStyle: { borderColor: theme.dark ? "#18181b" : "#ffffff", borderWidth: 2, borderRadius: 3 } }],
-    };
-  }, [theme, barakhadi]);
-
   return (
-    <>
-      <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
         <Card
           title="Distribution"
           caption="Share of akshara tokens and akshara types per category."
@@ -143,17 +97,6 @@ export function AksharaCharts({
         <Card title="Complexity by position" caption="Share of akshara tokens at each word position (words of ≥2 aksharas). Vowel letter = independent vowel; Non-gem. = non-geminate cluster; Dead C = virama-final.">
           <EChart option={positionOpt} height={300} label="Akshara complexity by word position" />
         </Card>
-      </div>
-      <Card
-        title="Consonant × vowel sign"
-        caption="Token counts of single-consonant aksharas (log colour scale). Blank = unattested. Rows ordered by frequency."
-      >
-        <div className="overflow-x-auto">
-          <div style={{ minWidth: 480, maxWidth: 640 }}>
-            <EChart option={heatOpt} height={barakhadi.consonants.length * 24 + 90} label="Consonant by vowel sign heatmap" />
-          </div>
-        </div>
-      </Card>
-    </>
+    </div>
   );
 }

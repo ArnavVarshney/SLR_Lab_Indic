@@ -46,6 +46,9 @@ export default function AboutPage() {
   const b = summary.boundary;
   const seg = b.segmentation;
   const hReduction = 1 - t.H_next_tok / t.H_unigram;
+  const comp = summary.composition;
+  const vs = (cls: keyof typeof comp.vowel_share, v: string) => fmtPct(comp.vowel_share[cls][v] ?? 0, 0);
+  const uI = (cls: keyof typeof comp.vowel_share) => fmtPct((comp.vowel_share[cls]["ು"] ?? 0) + (comp.vowel_share[cls]["ಿ"] ?? 0), 0);
 
   const corpus: Item[] = [
     {
@@ -88,10 +91,10 @@ export default function AboutPage() {
       implication: "Errors at word ends may reflect orthographic complexity rather than morphology alone, so analyse errors by position.",
     },
     {
-      name: "Consonant × vowel sign",
-      value: "Token counts for every consonant–vowel-sign combination (Aksharas page).",
-      significance: "Shows which barakhadi cells children actually meet.",
-      implication: "Items with rare or unattested combinations test generalisation beyond exposure.",
+      name: "Vowel-sign composition",
+      value: `${comp.skeletons.single} single, ${comp.skeletons.geminate} geminate and ${comp.skeletons.conjunct} other conjunct skeletons; ${fmtPct(comp.cells.attested / comp.cells.possible, 0)} of skeleton × vowel cells attested. Inherent ಅ: ${vs("single", "ಅ")} / ${vs("geminate", "ಅ")} / ${vs("conjunct", "ಅ")} of tokens; ◌ು: ${vs("single", "ು")} / ${vs("geminate", "ು")} / ${vs("conjunct", "ು")} (single / geminate / other conjunct).`,
+      significance: `Geminates carry ◌ು or ◌ಿ in ${uI("geminate")} of tokens vs ${uI("single")} for single consonants, driven by suffixes (ನ್ನು, ಲ್ಲಿ, ತ್ತು); other conjuncts mostly take ಅ or ◌ಾ (ಪ್ರ, ಕ್ಷ, ಪ್ರಾ).`,
+      implication: "Exposure to a skeleton is concentrated in a few vowel signs, so select and report stimuli at the akshara level, not the skeleton level; unattested cells test generalisation beyond exposure.",
     },
   ];
 

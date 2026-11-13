@@ -10,6 +10,7 @@ import { Segmented } from "./ui";
 const NAV = [
   { href: "/", label: "Overview" },
   { href: "/aksharas", label: "Aksharas" },
+  { href: "/composition", label: "Composition" },
   { href: "/transitions", label: "Transitions" },
   { href: "/segmentation", label: "Segmentation" },
   { href: "/words", label: "Words" },

@@ -1,5 +1,7 @@
 export type Weighting = "tok" | "typ";
 
+export type BaseClass = "single" | "geminate" | "conjunct";
+
 export interface ColumnarTable {
   columns: string[];
   rows: unknown[][];
@@ -66,7 +68,12 @@ export interface Summary {
     non_geminate: number;
     dead_consonant: number;
   }[];
-  barakhadi: { consonants: string[]; vowels: string[]; counts: number[][] };
+  composition: {
+    skeletons: Record<BaseClass, number>;
+    cells: { attested: number; possible: number };
+    malformed: { types: number; tokens: number };
+    vowel_share: Record<BaseClass, Record<string, number>>; // token share of each vowel within class
+  };
   boundary: {
     bins: number[];
     measures: { forward: BoundaryMeasure; backward: BoundaryMeasure };
@@ -88,6 +95,8 @@ export interface AksharaRow {
   vowel_kind: string;
   vowel: string;
   base_consonant: string;
+  skeleton: string; // consonant cluster ("" for vowel letters and malformed aksharas)
+  well_formed: boolean;
   coda: string;
   visual_components: number;
   token_count: number;

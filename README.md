@@ -18,7 +18,7 @@ uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt
 | File            | Contents                                                              |
 | --------------- | --------------------------------------------------------------------- |
 | `summary.json`  | totals and distributions                                              |
-| `aksharas.json` | akshara inventory: structure, frequency, position, next-akshara entropy |
+| `aksharas.json` | akshara inventory: structure, skeleton, frequency, position, next-akshara entropy |
 | `bigrams.json`  | within-word bigrams: forward/backward TP, PMI (token and type weighted) |
 | `trigrams.json` | within-word trigrams: P(C \| A,B)                                      |
 | `words.json`    | word types: frequency, length, complexity, TP, neighbourhood size     |

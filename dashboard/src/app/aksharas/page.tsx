@@ -16,7 +16,6 @@ export default function AksharasPage() {
           cluster={summary.cluster}
           vowelKind={summary.vowel_kind}
           position={summary.position}
-          barakhadi={summary.barakhadi}
         />
         <AksharaTable />
       </div>

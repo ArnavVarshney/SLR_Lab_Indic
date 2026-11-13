@@ -54,3 +54,20 @@ def test_akshara_features(ak, structure, cluster, vowel_kind, visual):
     f = akshara_features(ak)
     assert (f["structure"], f["cluster_type"], f["vowel_kind"], f["visual_components"]) == (
         structure, cluster, vowel_kind, visual)
+
+
+@pytest.mark.parametrize(
+    "ak, skeleton, well_formed",
+    [
+        ("ಕ್ಕಿ", "ಕ್ಕ", True),
+        ("ಸ್ತ್ರೀ", "ಸ್ತ್ರ", True),
+        ("ಮ್", "ಮ", True),  # dead consonant
+        ("ಕಾಂ", "ಕ", True),
+        ("ಎಂ", "", True),  # independent vowel: no skeleton
+        ("ಸುಂಂ", "", False),  # doubled anusvara
+        ("ಎಿ", "", False),  # vowel sign on a vowel letter
+    ],
+)
+def test_skeleton(ak, skeleton, well_formed):
+    f = akshara_features(ak)
+    assert (f["skeleton"], f["well_formed"]) == (skeleton, well_formed)
